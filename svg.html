@@ -513,7 +513,7 @@
   </g>
 </svg>
 <nav class="views" aria-label="视图切换">
-  <a href="index.html" aria-label="切换到 Canvas 实时版">Canvas</a>
+  <a href="canvas.html" aria-label="切换到 Canvas 实时版">Canvas</a>
   <a href="svg.html" aria-current="page" aria-label="当前视图：SVG 矢量版">SVG</a>
 </nav>
 <button id="music" class="music" type="button" data-track="行星脉动" aria-pressed="false" aria-label="播放背景音乐：行星脉动" title="行星脉动 — 背景音乐">
@@ -642,10 +642,13 @@
   const musicBtn = document.getElementById('music');
   const trackName = musicBtn.dataset.track;
   const VOLUME = .35;
-  const OTHER_VIEW = 'index.html';
+  const OTHER_VIEW = 'canvas.html';
   let rotating = false;
   let userPaused = false;
   let fadeRaf = 0;
+  // Set while the track runs silently because audible autoplay was blocked.
+  let mutedAutoplay = false;
+  let gestureSeen = false;
 
   function fadeTo(target, ms, done) {
     cancelAnimationFrame(fadeRaf);
@@ -662,10 +665,38 @@
 
   function startMusic() {
     if (!bgm.paused) return;
+    bgm.muted = false;
     bgm.volume = 0;
     const playing = bgm.play();
-    if (playing) playing.then(() => fadeTo(VOLUME, 1600)).catch(() => { bgm.volume = VOLUME; });
-    else fadeTo(VOLUME, 1600);
+    if (!playing) { fadeTo(VOLUME, 1600); return; }
+    playing.then(() => {
+      if (userPaused) { bgm.pause(); return; }
+      fadeTo(VOLUME, 1600);
+    }).catch(err => {
+      if (err && err.name === 'NotAllowedError') {
+        // Chrome refuses audible autoplay without a gesture. Try silent
+        // playback (allowed in some browsers) so the track is already running;
+        // otherwise it starts on the first interaction below.
+        bgm.muted = true;
+        bgm.volume = 0;
+        const silent = bgm.play();
+        if (silent) silent.then(() => {
+          if (userPaused) { bgm.pause(); return; }
+          if (gestureSeen) { mutedAutoplay = false; bgm.muted = false; fadeTo(VOLUME, 900); }
+          else mutedAutoplay = true;
+        }).catch(() => { bgm.muted = false; bgm.volume = VOLUME; });
+      } else {
+        bgm.volume = VOLUME;
+      }
+    });
+  }
+
+  function unmuteMusic() {
+    mutedAutoplay = false;
+    bgm.muted = false;
+    bgm.volume = 0;
+    if (bgm.paused) startMusic();
+    else fadeTo(VOLUME, 900);
   }
 
   function stopMusic() {
@@ -683,6 +714,8 @@
   });
 
   musicBtn.addEventListener('click', () => {
+    gestureSeen = true;
+    if (mutedAutoplay) { unmuteMusic(); return; } // first gesture was the button itself
     if (bgm.paused) { userPaused = false; startMusic(); }
     else { userPaused = true; stopMusic(); }
   });
@@ -693,15 +726,31 @@
     location.replace(OTHER_VIEW);
   });
 
-  // Autoplay is usually blocked until the first user gesture: try right away,
-  // then fall back to starting on the first interaction that isn't the button.
+  // Try audible playback on load. If the browser blocks it, the first gesture
+  // anywhere (click, tap or key press) starts it; a muted fallback that some
+  // browsers allow is unmuted at that point instead.
+  function removeUnlockListeners() {
+    removeEventListener('pointerdown', onFirstGesture, true);
+    removeEventListener('click', onFirstGesture, true);
+    removeEventListener('keydown', onFirstGesture, true);
+    removeEventListener('touchstart', onFirstGesture, true);
+    removeEventListener('touchend', onFirstGesture, true);
+  }
+  function onFirstGesture(e) {
+    if (musicBtn.contains(e.target)) return; // the button's click handler deals with it
+    gestureSeen = true;
+    if (bgm.muted) { unmuteMusic(); removeUnlockListeners(); }
+    // Touch activation lands only after the touch sequence, so a rejected
+    // play() is retried by the following touchend/click instead of giving up.
+    else if (bgm.paused && !userPaused) startMusic();
+    else removeUnlockListeners();
+  }
   startMusic();
-  addEventListener('pointerdown', e => {
-    if (!musicBtn.contains(e.target) && bgm.paused) startMusic();
-  }, { once: true, capture: true });
-  addEventListener('keydown', () => {
-    if (bgm.paused) startMusic();
-  }, { once: true, capture: true });
+  addEventListener('pointerdown', onFirstGesture, { capture: true });
+  addEventListener('click', onFirstGesture, { capture: true });
+  addEventListener('keydown', onFirstGesture, { capture: true });
+  addEventListener('touchstart', onFirstGesture, { capture: true, passive: true });
+  addEventListener('touchend', onFirstGesture, { capture: true, passive: true });
 
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
     svg.pauseAnimations();

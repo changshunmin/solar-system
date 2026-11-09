@@ -1,8 +1,8 @@
 # Solar System · 太阳系仪
 
-一个纯静态的太阳系可视化项目，提供 **Canvas 实时版**（`index.html`）与 **SVG 矢量版**（`svg.html`）两种独立渲染。两版都包含太阳、八大行星、冥王星、卫星、行星环、小行星带、柯伊伯带与长周期彗星，并配有背景音乐、视图切换和播放结束后的自动轮换。
+一个纯静态的太阳系可视化项目，提供 **Canvas 实时版**（`canvas.html`）与 **SVG 矢量版**（`svg.html`）两种独立渲染。两版都包含太阳、八大行星、冥王星、卫星、行星环、小行星带、柯伊伯带与长周期彗星，并配有背景音乐、视图切换和播放结束后的自动轮换。
 
-无需构建工具，无前端依赖，直接用浏览器打开即可。两个页面均为单文件（内联 CSS/JS），唯一的外部资源是各自的 MP3 背景音乐。
+无需构建工具，无前端依赖，直接用浏览器打开即可。两个渲染页面均为单文件（内联 CSS/JS），唯一的外部资源是各自的 MP3 背景音乐。
 
 ## 快速开始
 
@@ -13,8 +13,11 @@ python3 -m http.server 8000
 
 然后打开：
 
-- Canvas 版：<http://localhost:8000/index.html>
+- 默认入口（SVG 版）：<http://localhost:8000/>
+- Canvas 版：<http://localhost:8000/canvas.html>
 - SVG 版：<http://localhost:8000/svg.html>
+
+根目录的 `index.html` 是一个跳转页，会把默认访问（如 `http://172.16.10.213:8090/`）导向 `svg.html`。
 
 > 建议通过本地 HTTP 服务访问。直接双击 `file://` 通常也能看到画面，但浏览器的自动播放策略、跨页面跳转和音频行为可能因环境而异。
 
@@ -29,7 +32,7 @@ python3 -m http.server 8000
 - **深空元素**：小行星带、柯伊伯带、长周期彗星、星空与星云背景。
 - **背景音乐**：Canvas 版为《星际缓航》，SVG 版为《行星脉动》；音乐胶囊按钮支持播放/暂停，音量带淡入淡出。
 - **自动轮换**：当前视图的音乐自然播放完毕后，页面自动切换到另一视图，并由目标页面尝试开始播放其音乐，如此循环。手动暂停音乐时不会触发切换（目标页面的自动播放仍受浏览器策略约束）。
-- **自动播放回退**：页面加载时先尝试自动播放；若被浏览器拦截，则在用户首次点击或按键后开始播放。
+- **自动播放回退**：页面加载时先尝试带声音自动播放（浏览器允许时会直接响起）；若被浏览器拦截，则在用户首次点击、触摸或按键时立即开始播放。部分浏览器允许静音起播时，会先静音播放并在首次交互后取消静音。Chrome/Edge 默认策略下带声音的自动播放必须有一次用户交互，页面代码无法绕过。
 - **响应式**：Canvas 随窗口尺寸重绘（DPR 上限 2）；SVG 使用 `viewBox` + `preserveAspectRatio` 适配不同比例。
 - **减少动态**：检测 `prefers-reduced-motion: reduce`；Canvas 只绘制一帧静态画面，SVG 暂停 SMIL 动画。
 - **可访问性**：Canvas `role="img"` + `aria-label`；SVG `role="img"` + `<title>`/`<desc>`；音乐按钮使用 `aria-pressed` 与动态 `aria-label`。
@@ -38,7 +41,7 @@ python3 -m http.server 8000
 
 | | Canvas 版 | SVG 版 |
 |---|---|---|
-| 文件 | `index.html` | `svg.html` |
+| 文件 | `canvas.html` | `svg.html` |
 | 渲染 | Canvas 2D + `requestAnimationFrame` | SVG + SMIL |
 | 行星标签 | 无（仅 HUD 标题） | 有（每个行星一个 `plabel`） |
 | 卫星 | 地球 1、火星 2、木星 4 | 地球 1、火星 2、木星 4、土星 1 |
@@ -51,7 +54,8 @@ python3 -m http.server 8000
 
 ```text
 solar-system/
-├── index.html          # Canvas 实时版
+├── index.html          # 默认入口：跳转到 SVG 版
+├── canvas.html         # Canvas 实时版
 ├── svg.html            # SVG 矢量版
 ├── 星际缓航.mp3         # Canvas 版背景音乐
 ├── 行星脉动.mp3         # SVG 版背景音乐
@@ -63,7 +67,7 @@ solar-system/
 
 ### 关于 `gen_solar.py`
 
-`gen_solar.py` 是一个独立的一次性生成脚本：它用 Python 拼装一个自包含的 1000×1000 SMIL SVG，并写入 `/data/agent-memory/solar_system.svg`。它**不生成** `index.html` 或 `svg.html`，运行它也不会修改本项目中的页面。除非你确实需要那个外部 SVG，否则无需运行。
+`gen_solar.py` 是一个独立的一次性生成脚本：它用 Python 拼装一个自包含的 1000×1000 SMIL SVG，并写入 `/data/agent-memory/solar_system.svg`。它**不生成** `index.html`、`canvas.html` 或 `svg.html`，运行它也不会修改本项目中的页面。除非你确实需要那个外部 SVG，否则无需运行。
 
 ## 操作
 
@@ -73,7 +77,7 @@ solar-system/
 
 ## 技术说明
 
-### Canvas（`index.html`）
+### Canvas（`canvas.html`）
 
 - 每帧 `clearRect` 后依次绘制星空、柯伊伯带、小行星带、轨道、行星（按 y 轴分前后两层）、太阳、彗星。
 - 行星显示半径为手工压缩值，轨道周期也经过压缩，仅用于视觉呈现，不代表真实比例。
@@ -96,8 +100,16 @@ solar-system/
 ## 浏览器要求
 
 - 现代 Chrome / Edge / Firefox / Safari（需支持 Canvas 2D、ES6 与 SMIL 动画）。
-- 背景音乐的自动播放受浏览器策略影响；若被拦截，需要一次用户交互。
+- 背景音乐的自动播放受浏览器策略影响：Chrome/Edge 默认会拦截无交互的带声音自动播放（静音 `<audio>` 也会被拦截），页面会在首次点击/触摸/按键时立即起播。
 - “减少动态”依赖 `prefers-reduced-motion` 媒体查询。
+
+### 让部署端无需交互自动播放
+
+如果 H5 运行在可控制浏览器参数的终端（kiosk、数字标牌、WebView、一体机），可以关闭自动播放限制，让音乐在页面加载后直接响起：
+
+- Chrome / Edge 启动参数：`--autoplay-policy=no-user-gesture-required`
+- Linux 受管策略：在 `/etc/opt/chrome/policies/managed/autoplay.json` 写入 `{"AutoplayAllowed": true}`
+- Android WebView：调用 `WebSettings.setMediaPlaybackRequiresUserGesture(false)`
 
 ## 已知限制
 
@@ -106,7 +118,6 @@ solar-system/
 - **小屏幕**：在 390px 宽度附近，部分卫星与细环会缩小到亚像素级，仍然存在并运动，但不易辨认。
 - **无构建/测试体系**：项目是纯静态页面，没有打包、单元测试或依赖管理；验证依赖静态检查与浏览器运行时检查。
 - **音频文件较大**：两首 MP3 均为约 7 MB，首次加载需要一定带宽。
-- **非 Git 仓库**：当前目录未初始化 Git，版本管理需自行建立。
 - **未声明许可证**：如需分发或复用，请先确认素材（音乐、代码）的授权情况。
 
 ## 自定义
