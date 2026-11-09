@@ -21,6 +21,33 @@ python3 -m http.server 8000
 
 > 建议通过本地 HTTP 服务访问。直接双击 `file://` 通常也能看到画面，但浏览器的自动播放策略、跨页面跳转和音频行为可能因环境而异。
 
+## H5 部署
+
+当前内网 H5 由 systemd 服务 `solar-preview.service` 提供，直接以静态方式服务本仓库目录：
+
+- 服务：`solar-preview.service`（`python3 -m http.server 8090`，用户 `nobody`，已设为开机自启）
+- 服务目录：`/data/code/solar-system`
+- 默认入口：<http://172.16.10.213:8090/>（自动跳转到 SVG 版）
+- Canvas：<http://172.16.10.213:8090/canvas.html>
+- SVG：<http://172.16.10.213:8090/svg.html>
+
+更新页面文件后重新部署并检查：
+
+```bash
+systemctl restart solar-preview.service
+systemctl is-active solar-preview.service
+curl -I http://127.0.0.1:8090/
+curl -s http://127.0.0.1:8090/ | grep 'url=svg.html'
+```
+
+说明：
+
+- 服务直接读取仓库文件，静态内容更新后无需构建；重启仅用于确保服务状态干净。
+- `git push` 只同步 GitHub，不会改变本机 8090 的页面内容。
+- 若浏览器仍显示旧页面，强制刷新（`Ctrl/Cmd+Shift+R`）即可。
+- 首次部署或服务管理：`systemctl enable --now solar-preview.service` / `systemctl stop solar-preview.service`。
+- 当前 preview 使用 Python 自带 `http.server`，不支持 Range 请求，MP3 不能拖动进度；正式对外部署建议换成 nginx 等静态服务器。
+
 ## 功能
 
 - **两种渲染**：Canvas 2D（`requestAnimationFrame`）与 SVG + SMIL（`animateMotion`），可随时通过右上角 `Canvas` / `SVG` 按钮切换。
@@ -59,20 +86,16 @@ solar-system/
 ├── svg.html            # SVG 矢量版
 ├── 星际缓航.mp3         # Canvas 版背景音乐
 ├── 行星脉动.mp3         # SVG 版背景音乐
-├── gen_solar.py        # 独立的 SVG 生成脚本（辅助/实验，非两版页面的生成器）
 ├── README.md
-├── .orchestrator/      # 开发过程的编排与测试证据（内部使用，非运行依赖）
-└── .remember/          # 会话记忆（内部使用，非运行依赖）
+└── .gitignore
 ```
 
-### 关于 `gen_solar.py`
-
-`gen_solar.py` 是一个独立的一次性生成脚本：它用 Python 拼装一个自包含的 1000×1000 SMIL SVG，并写入 `/data/agent-memory/solar_system.svg`。它**不生成** `index.html`、`canvas.html` 或 `svg.html`，运行它也不会修改本项目中的页面。除非你确实需要那个外部 SVG，否则无需运行。
+> 本地工作目录还可能包含 `.orchestrator/`（测试证据）、`.remember/`（会话记忆）和 `gen_solar.py`（一次性辅助脚本）。它们已写入 `.gitignore`，不纳入版本库，也不是页面运行依赖。
 
 ## 操作
 
 - **切换视图**：点击右上角的 `Canvas` / `SVG`。
-- **音乐**：点击左下角音乐胶囊播放/暂停；首次点击页面其他区域或按键也会尝试启动音乐。
+- **音乐**：点击左上角音乐胶囊播放/暂停；首次点击页面其他区域或按键也会尝试启动音乐。
 - **自动轮换**：保持音乐播放，等待当前曲目自然结束；页面会切换到另一版并尝试继续播放。若手动暂停，则不会自动切换。
 
 ## 技术说明

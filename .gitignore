@@ -3,3 +3,6 @@
 
 # Session memory / notes
 .remember/
+
+# Local one-off helper script (not part of the site)
+gen_solar.py
