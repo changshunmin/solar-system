@@ -101,11 +101,6 @@
     box-shadow: 0 0 20px rgba(120, 150, 220, .12);
   }
   .music[data-muted="true"] .eq i { animation: none; opacity: .5; }
-  .music[data-muted="true"]::after {
-    content: "· 点击开启声音";
-    font-size: 9px; letter-spacing: .1em;
-    color: rgba(235, 242, 255, .62);
-  }
   #bgm {
     position: fixed; left: 0; top: 0; width: 1px; height: 1px;
     opacity: 0; pointer-events: none;
@@ -705,12 +700,10 @@
 
   function showMutedHint() {
     musicBtn.dataset.muted = 'true';
-    musicBtn.title = '点击开启声音';
     musicBtn.setAttribute('aria-label', `背景音乐静音播放中，点击开启声音：${trackName}`);
   }
   function clearMutedHint() {
     delete musicBtn.dataset.muted;
-    musicBtn.title = `${trackName} — 背景音乐`;
   }
 
   function startMusic() {
