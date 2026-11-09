@@ -95,6 +95,21 @@
   .music[aria-pressed="true"] .eq i { animation: equalize 1.1s ease-in-out infinite; }
   .music[aria-pressed="true"] .eq i:nth-child(2) { animation-delay: .18s; }
   .music[aria-pressed="true"] .eq i:nth-child(3) { animation-delay: .36s; }
+  .music[data-muted="true"] {
+    color: rgba(235, 242, 255, .82);
+    border-color: rgba(170, 195, 240, .34);
+    box-shadow: 0 0 20px rgba(120, 150, 220, .12);
+  }
+  .music[data-muted="true"] .eq i { animation: none; opacity: .5; }
+  .music[data-muted="true"]::after {
+    content: "· 点击开启声音";
+    font-size: 9px; letter-spacing: .1em;
+    color: rgba(235, 242, 255, .62);
+  }
+  #bgm {
+    position: fixed; left: 0; top: 0; width: 1px; height: 1px;
+    opacity: 0; pointer-events: none;
+  }
   @keyframes music-in { to { opacity: 1; } }
   @keyframes equalize {
     0%, 100% { height: 2px; opacity: .5; }
@@ -229,6 +244,17 @@
       <stop offset=".55" stop-color="#b9b7b2"/>
       <stop offset="1" stop-color="#4a4844"/>
     </radialGradient>
+
+    <radialGradient id="g-titan" cx="35%" cy="30%" r="78%">
+      <stop offset="0" stop-color="#f6d9a4"/>
+      <stop offset=".55" stop-color="#d79a4d"/>
+      <stop offset="1" stop-color="#7d4a17"/>
+    </radialGradient>
+    <linearGradient id="g-iapetus" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#4a4030"/>
+      <stop offset=".45" stop-color="#7c6f58"/>
+      <stop offset="1" stop-color="#e4dbc6"/>
+    </linearGradient>
 
     <linearGradient id="g-comet-tail" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="-150" y2="0">
       <stop offset="0" stop-color="#f2fbff" stop-opacity=".85"/>
@@ -426,9 +452,23 @@
           <path d="M-52 0 A52 14.9 0 0 1 52 0" fill="none" stroke="rgba(205,190,155,.20)" stroke-width="1.2"/>
         </g>
         <g>
-          <animateMotion dur="6.5s" repeatCount="indefinite" rotate="0"
-            path="M60 0 A60 60 0 1 0 -60 0 A60 60 0 1 0 60 0"/>
-          <circle r="1.6" fill="#cfc6b4"/>
+          <title>Enceladus</title>
+          <animateMotion dur="6.5s" begin="-1.5s" repeatCount="indefinite" rotate="0"
+            path="M63 0 A63 63 0 1 0 -63 0 A63 63 0 1 0 63 0"/>
+          <circle r="1.6" fill="#eef4f7"/>
+        </g>
+        <g>
+          <title>Titan</title>
+          <animateMotion dur="10s" begin="-3s" repeatCount="indefinite" rotate="0"
+            path="M84 0 A84 84 0 1 0 -84 0 A84 84 0 1 0 84 0"/>
+          <circle r="2.1" fill="url(#g-titan)"/>
+          <circle r="2.45" fill="none" stroke="rgba(226,178,106,.28)" stroke-width=".5"/>
+        </g>
+        <g>
+          <title>Iapetus</title>
+          <animateMotion dur="16s" begin="-9s" repeatCount="indefinite" rotate="0"
+            path="M103 0 A103 103 0 1 0 -103 0 A103 103 0 1 0 103 0"/>
+          <circle r="1.5" fill="url(#g-iapetus)"/>
         </g>
         <text class="plabel" y="40" text-anchor="middle">SATURN</text>
       </g>
@@ -520,7 +560,7 @@
   <span class="eq" aria-hidden="true"><i></i><i></i><i></i></span>
   <span class="track">行星脉动</span>
 </button>
-<audio id="bgm" src="行星脉动.mp3" preload="auto"></audio>
+<video id="bgm" src="行星脉动.mp3" preload="auto" playsinline aria-hidden="true"></video>
 <script>
 (() => {
   'use strict';
@@ -663,27 +703,40 @@
     fadeRaf = requestAnimationFrame(step);
   }
 
+  function showMutedHint() {
+    musicBtn.dataset.muted = 'true';
+    musicBtn.title = '点击开启声音';
+    musicBtn.setAttribute('aria-label', `背景音乐静音播放中，点击开启声音：${trackName}`);
+  }
+  function clearMutedHint() {
+    delete musicBtn.dataset.muted;
+    musicBtn.title = `${trackName} — 背景音乐`;
+  }
+
   function startMusic() {
     if (!bgm.paused) return;
     bgm.muted = false;
-    bgm.volume = 0;
+    // Keep the attempt audible: Chrome treats volume 0 as inaudible and would
+    // let it start, then pause as soon as a fade raised the volume.
+    bgm.volume = VOLUME;
     const playing = bgm.play();
-    if (!playing) { fadeTo(VOLUME, 1600); return; }
-    playing.then(() => {
-      if (userPaused) { bgm.pause(); return; }
-      fadeTo(VOLUME, 1600);
-    }).catch(err => {
+    if (!playing) return;
+    playing.catch(err => {
       if (err && err.name === 'NotAllowedError') {
-        // Chrome refuses audible autoplay without a gesture. Try silent
-        // playback (allowed in some browsers) so the track is already running;
-        // otherwise it starts on the first interaction below.
+        // Chrome refuses audible autoplay without a gesture. A muted <video>
+        // may still autoplay, so start the track silently right away; the
+        // first gesture then only has to unmute it.
         bgm.muted = true;
         bgm.volume = 0;
         const silent = bgm.play();
         if (silent) silent.then(() => {
           if (userPaused) { bgm.pause(); return; }
-          if (gestureSeen) { mutedAutoplay = false; bgm.muted = false; fadeTo(VOLUME, 900); }
-          else mutedAutoplay = true;
+          if (gestureSeen) {
+            mutedAutoplay = false; clearMutedHint();
+            bgm.muted = false; fadeTo(VOLUME, 900);
+          } else {
+            mutedAutoplay = true; showMutedHint();
+          }
         }).catch(() => { bgm.muted = false; bgm.volume = VOLUME; });
       } else {
         bgm.volume = VOLUME;
@@ -693,10 +746,11 @@
 
   function unmuteMusic() {
     mutedAutoplay = false;
+    clearMutedHint();
     bgm.muted = false;
     bgm.volume = 0;
-    if (bgm.paused) startMusic();
-    else fadeTo(VOLUME, 900);
+    if (bgm.paused) { musicBtn.setAttribute('aria-label', `播放背景音乐：${trackName}`); startMusic(); }
+    else { musicBtn.setAttribute('aria-label', `暂停背景音乐：${trackName}`); fadeTo(VOLUME, 900); }
   }
 
   function stopMusic() {
@@ -706,10 +760,12 @@
   bgm.addEventListener('play', () => {
     userPaused = false;
     musicBtn.setAttribute('aria-pressed', 'true');
-    musicBtn.setAttribute('aria-label', `暂停背景音乐：${trackName}`);
+    if (mutedAutoplay) showMutedHint();
+    else musicBtn.setAttribute('aria-label', `暂停背景音乐：${trackName}`);
   });
   bgm.addEventListener('pause', () => {
     musicBtn.setAttribute('aria-pressed', 'false');
+    clearMutedHint();
     musicBtn.setAttribute('aria-label', `播放背景音乐：${trackName}`);
   });
 
@@ -721,14 +777,18 @@
   });
 
   bgm.addEventListener('ended', () => {
+    // A muted autoplay has never been heard; loop it instead of silently
+    // rotating to the other view.
+    if (mutedAutoplay) { bgm.currentTime = 0; bgm.play(); return; }
     if (rotating || userPaused) return;
     rotating = true;
     location.replace(OTHER_VIEW);
   });
 
-  // Try audible playback on load. If the browser blocks it, the first gesture
-  // anywhere (click, tap or key press) starts it; a muted fallback that some
-  // browsers allow is unmuted at that point instead.
+  // Try audible playback on load. If the browser blocks it, a muted autoplay
+  // keeps the track running silently (Chrome allows muted <video>) and the
+  // first gesture anywhere (click, tap or key press) unmutes it; if even the
+  // muted start is blocked, the gesture starts it audibly from the beginning.
   function removeUnlockListeners() {
     removeEventListener('pointerdown', onFirstGesture, true);
     removeEventListener('click', onFirstGesture, true);
