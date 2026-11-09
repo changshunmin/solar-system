@@ -245,6 +245,16 @@
       <stop offset=".55" stop-color="#dde8ea"/>
       <stop offset="1" stop-color="#8fa2a6"/>
     </radialGradient>
+    <radialGradient id="g-dione" cx="35%" cy="30%" r="78%">
+      <stop offset="0" stop-color="#f5f5ef"/>
+      <stop offset=".55" stop-color="#c9c8c0"/>
+      <stop offset="1" stop-color="#74736c"/>
+    </radialGradient>
+    <linearGradient id="g-iapetus" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#4a4030"/>
+      <stop offset=".45" stop-color="#7c6f58"/>
+      <stop offset="1" stop-color="#e4dbc6"/>
+    </linearGradient>
 
     <linearGradient id="g-comet-tail" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="-150" y2="0">
       <stop offset="0" stop-color="#f2fbff" stop-opacity=".85"/>
@@ -442,22 +452,22 @@
           <path d="M-52 0 A52 14.9 0 0 1 52 0" fill="none" stroke="rgba(205,190,155,.20)" stroke-width="1.2"/>
         </g>
         <g>
-          <title>土卫一（Mimas）</title>
+          <title>土卫五（Tethys）</title>
           <animateMotion dur="6.5s" begin="-1.5s" repeatCount="indefinite" rotate="0"
             path="M63 0 A63 63 0 1 0 -63 0 A63 63 0 1 0 63 0"/>
-          <circle r="1.5" fill="url(#g-moon)"/>
+          <circle r="1.5" fill="url(#g-tethys)"/>
         </g>
         <g>
-          <title>土卫二（Enceladus）</title>
+          <title>土卫六（Dione）</title>
           <animateMotion dur="10s" begin="-3s" repeatCount="indefinite" rotate="0"
             path="M84 0 A84 84 0 1 0 -84 0 A84 84 0 1 0 84 0"/>
-          <circle r="1.7" fill="#f2f8fa"/>
+          <circle r="1.7" fill="url(#g-dione)"/>
         </g>
         <g>
-          <title>土卫三（Tethys）</title>
+          <title>土卫八（Iapetus）</title>
           <animateMotion dur="16s" begin="-9s" repeatCount="indefinite" rotate="0"
             path="M103 0 A103 103 0 1 0 -103 0 A103 103 0 1 0 103 0"/>
-          <circle r="2.1" fill="url(#g-tethys)"/>
+          <circle r="2.1" fill="url(#g-iapetus)"/>
         </g>
         <text class="plabel" y="40" text-anchor="middle">SATURN</text>
       </g>
